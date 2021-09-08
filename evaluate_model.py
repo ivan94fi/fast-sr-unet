@@ -23,7 +23,7 @@ import data_loader as dl
 import pytorch_ssim as torch_ssim
 from models import *
 from pytorch_unet import *
-from render import cv2toTorch, torchToCv2
+from render import cv2toTorch
 
 
 def cat_dim(t1, t2):

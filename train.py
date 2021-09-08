@@ -3,7 +3,6 @@ from comet_ml import Experiment  # must be imported before torch
 # isort: split
 
 import os
-import time
 from pprint import pformat
 
 import utils

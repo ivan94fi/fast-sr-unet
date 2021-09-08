@@ -6,7 +6,7 @@ from os.path import join
 
 import torch
 import torchvision
-from PIL import Image, ImageFile, ImageFilter
+from PIL import Image, ImageFile
 from torch.utils import data
 from torchvision.transforms import functional
 

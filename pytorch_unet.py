@@ -1,6 +1,5 @@
 # the unet code is inspired from https://github.com/usuyama/pytorch-unet
 
-import math
 from builtins import super
 
 import torch
