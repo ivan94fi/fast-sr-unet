@@ -1,6 +1,8 @@
 import argparse
 import os
 from pathlib import Path
+import torch
+import matplotlib.pyplot as plt
 
 
 class ARArgs:
@@ -44,6 +46,7 @@ class ARArgs:
         ap.add_argument("--crf", type=int, default=23, help="Reference compression CRF")
         ap.add_argument('--show-only-upscaled', dest='show-only-upscaled', action='store_true',
                         help="[RENDER.PY ONLY] If you want to show only the neural net upscaled version of the video")
+        ap.add_argument("--no-comet", action="store_true")
 
         if args is None:
             args = vars(ap.parse_args())
@@ -72,6 +75,7 @@ class ARArgs:
         self.CRF = args['crf']
         self.TEST_DIR = args['testdir']
         self.SHOW_ONLY_HQ = args['show-only-upscaled']
+        self.no_comet = args['no_comet']
 
         self.archs = archs
 
@@ -135,3 +139,45 @@ def get_gaussian_kernel(kernel_size=3, sigma=2, channels=3):
     gaussian_filter.weight.requires_grad = False
 
     return gaussian_filter
+
+
+def plot_grads(model):
+    """Create a figure with average and max gradients for each layer."""
+    avg_grads = []
+    max_grads = []
+    layers = []
+    with torch.no_grad():
+        for n, p in model.named_parameters():
+            if p.requires_grad and p.grad is not None and "bias" not in n:
+                layers.append(n.replace(".weight",""))
+                avg_grads.append(p.grad.abs().mean().cpu())
+                max_grads.append(p.grad.abs().max().cpu())
+
+    x_range = range(len(layers))
+
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(bottom=0.3)
+
+    ax.bar(x_range, max_grads, alpha=0.5, lw=1, color="c", label="max")
+    ax.bar(x_range, avg_grads, alpha=0.5, lw=1, color="b", label="avg")
+
+    ax.set_xticks(x_range)
+    ax.set_xticklabels(layers, fontsize="small", rotation=30)
+    ax.legend()
+
+    return fig
+
+
+def to_channel_last(tensor):
+    """Move channel axis in last position."""
+    return tensor.permute(1, 2, 0)
+
+
+def make_grid(*imgs):
+    imgs = [torch.cat(im.detach().clone().split(1), dim=2).squeeze() for im in imgs]
+    grid = torch.cat(imgs, dim=2)
+    grid = to_channel_last(grid.add(1).mul(0.5).mul(255).cpu().byte())
+
+    return grid
+
+

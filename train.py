@@ -1,5 +1,11 @@
+from comet_ml import Experiment  # must be imported before torch
+
+# isort: split
+
 import os, utils
+from utils import make_grid, plot_grads
 import time
+from pprint import pformat
 
 args = utils.ARArgs()
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -9,6 +15,7 @@ import numpy as np
 import data_loader as dl
 import torch
 from torch import nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import pytorch_ssim  # courtesy of https://github.com/Po-Hsun-Su/pytorch-ssim
 import tqdm
@@ -17,9 +24,25 @@ from models import Discriminator, \
     SRResNet  # courtesy of https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution
 from pytorch_unet import SRUnet, UNet, SimpleResNet
 
+import warnings
+
+warnings.filterwarnings(
+    action="ignore",
+    category=UserWarning,
+    module=r"torch.nn.functional",
+)
+
+
 if __name__ == '__main__':
     args = utils.ARArgs()
     torch.autograd.set_detect_anomaly(True)
+
+    experiment = Experiment(
+        project_name="memorestore",
+        auto_metric_logging=False,
+        log_graph=False,
+        disabled=args.no_comet,
+    )
 
     print_model = args.VERBOSE
     arch_name = args.ARCHITECTURE
@@ -58,6 +81,13 @@ if __name__ == '__main__':
     lpips_loss.to(device)
     lpips_alex.to(device)
     critic.to(device)
+    sigmoid = nn.Sigmoid()
+
+    model_graph = {
+        "generator": model,
+        "discriminator": critic,
+    }
+    experiment.set_model_graph(pformat(model_graph))
 
     dataset_train = dl.ARDataLoader2(path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=False, use_ar=True)
     dataset_test = dl.ARDataLoader2(path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=True, use_ar=True)
@@ -118,7 +148,11 @@ if __name__ == '__main__':
             loss_discr.backward()
             critic_opt.step()
 
-            loss_discr = float(loss_discr)
+            experiment.log_metric("d_loss_sum", loss_discr.item())
+            experiment.log_metric("d_loss_real", 0.5 * loss_true.item())
+            experiment.log_metric("d_loss_fake", 0.5 * loss_fake.item())
+            experiment.log_metric("real_output", sigmoid(pred_true).mean().item())
+            experiment.log_metric("fake_output", sigmoid(pred_fake).mean().item())
 
             ## train generator phase
             gan_opt.zero_grad()
@@ -132,11 +166,29 @@ if __name__ == '__main__':
             loss_gen.backward()
             gan_opt.step()
 
+            if step % 500 == 0:
+                h, w = y_true.shape[2], y_true.shape[3]
+                resized_x = F.interpolate(x.detach().clone(), size=(h,w))
+                experiment.log_image(
+                    make_grid(resized_x, y_true, y_fake), name="lq-hq-rec"
+                )
+                experiment.log_figure("g_grads", plot_grads(model))
+                experiment.log_figure("d_grads", plot_grads(critic))
+
+
+            experiment.log_metric("g_loss_sum", loss_gen.item())
+            experiment.log_metric("g_loss_adv", l0 * bce.item())
+            experiment.log_metric("g_loss_l1", w1 * ssim_loss.item())
+            experiment.log_metric("g_loss_lpips", w0 * lpips_loss_.item())
+            experiment.log_metric("fake_output'", sigmoid(pred_fake).mean().item())
+            experiment.log_metric(
+                "lpips gt-fake", lpips_alex(y_true, y_fake).mean().item()
+            )
+
+            content_loss = loss_gen.item() - l0 * bce.item()
             tqdm_.set_description(
-                'Loss discr: {}; Content loss: {}; BCE component / L0: {}'.format(loss_discr,
-                                                                                  float(loss_gen) - float(
-                                                                                      l0 * loss_bce_gen),
-                                                                                  float(loss_bce_gen)))
+                f"D loss: {loss_discr.item():.3}; Content loss: {content_loss:.3}; BCE/l0: {bce.item():.3}"
+            )
             step += 1
 
         if (e + 1) % args.VALIDATION_FREQ == 0:
