@@ -1,8 +1,9 @@
 import argparse
 import os
 from pathlib import Path
-import torch
+
 import matplotlib.pyplot as plt
+import torch
 
 
 class ARArgs:
@@ -177,8 +178,9 @@ def show_tensor(t):
 
 
 def get_gaussian_kernel(kernel_size=3, sigma=2, channels=3):
-    import torch
     import math
+
+    import torch
     from torch import nn as nn
 
     # Create a x, y coordinate grid of shape (kernel_size, kernel_size, 2)

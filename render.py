@@ -1,17 +1,20 @@
 import time
 from threading import Thread
-import data_loader as dl
+
 import torch
 
+import data_loader as dl
+
 torch.backends.cudnn.benchmark = True
-import numpy as np
-from models import *
-import utils
-from tqdm import tqdm
-import cv2
-from pytorch_unet import UNet, SRUnet, SimpleResNet
 from queue import Queue
 
+import cv2
+import numpy as np
+from tqdm import tqdm
+
+import utils
+from models import *
+from pytorch_unet import SimpleResNet, SRUnet, UNet
 
 # from apex import amp
 

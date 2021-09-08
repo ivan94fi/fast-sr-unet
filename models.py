@@ -1,9 +1,10 @@
 # courtesy of https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution
 
-import torch
-from torch import nn
-import torchvision
 import math
+
+import torch
+import torchvision
+from torch import nn
 from torch.nn import functional as F
 from torch.nn.utils import spectral_norm
 

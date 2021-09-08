@@ -1,26 +1,29 @@
 # from apex import amp
+import os
+
 import pandas as pd
-import utils, os
+
+import utils
 
 args = utils.ARArgs()
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = args.CUDA_DEVICE
 
+import shutil
 from pathlib import Path
+from queue import Queue
+from threading import Thread
 
-import tqdm
-import data_loader as dl
-import pytorch_ssim as torch_ssim
+import cv2
 import lpips
 import numpy as np
+import tqdm
 
+import data_loader as dl
+import pytorch_ssim as torch_ssim
 from models import *
 from pytorch_unet import *
 from render import cv2toTorch, torchToCv2
-import cv2
-from queue import Queue
-from threading import Thread
-import shutil
 
 
 def cat_dim(t1, t2):

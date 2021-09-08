@@ -2,30 +2,30 @@ from comet_ml import Experiment  # must be imported before torch
 
 # isort: split
 
-import os, utils
-from utils import make_grid, plot_grads
+import os
 import time
 from pprint import pformat
+
+import utils
+from utils import make_grid, plot_grads
 
 args = utils.ARArgs()
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = args.CUDA_DEVICE
 
-import data_loader as dl
-import torch
-from torch import nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-import pytorch_ssim  # courtesy of https://github.com/Po-Hsun-Su/pytorch-ssim
-import tqdm
-import lpips  # courtesy of https://github.com/richzhang/PerceptualSimilarity
-from models import (
-    Discriminator,
-    SRResNet,
-)  # courtesy of https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution
-from pytorch_unet import SRUnet, UNet, SimpleResNet
-
 import warnings
+
+import lpips
+import torch
+import torch.nn.functional as F
+import tqdm
+from torch import nn as nn
+from torch.utils.data import DataLoader
+
+import data_loader as dl
+import pytorch_ssim
+from models import Discriminator, SRResNet
+from pytorch_unet import SimpleResNet, SRUnet, UNet
 
 warnings.filterwarnings(
     action="ignore",

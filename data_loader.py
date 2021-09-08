@@ -1,13 +1,14 @@
-import torch
-import torchvision
-from torch.utils import data
 import os
-from PIL import Image, ImageFilter, ImageFile
 import random
 from io import BytesIO
-from torchvision.transforms import functional
-from os.path import join
 from itertools import chain
+from os.path import join
+
+import torch
+import torchvision
+from PIL import Image, ImageFile, ImageFilter
+from torch.utils import data
+from torchvision.transforms import functional
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
