@@ -11,7 +11,6 @@ args = utils.ARArgs()
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = args.CUDA_DEVICE
 
-import numpy as np
 import data_loader as dl
 import torch
 from torch import nn as nn
@@ -35,7 +34,6 @@ warnings.filterwarnings(
 
 if __name__ == '__main__':
     args = utils.ARArgs()
-    torch.autograd.set_detect_anomaly(True)
 
     experiment = Experiment(
         project_name="memorestore",
@@ -67,7 +65,6 @@ if __name__ == '__main__':
         model.load_state_dict(state_dict)
 
     critic = Discriminator()
-    model = model.cuda()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     critic_opt = torch.optim.Adam(lr=1e-4, params=critic.parameters())
@@ -105,18 +102,9 @@ if __name__ == '__main__':
     w0, w1, l0 = args.W0, args.W1, args.L0
 
     for e in range(n_epochs):
-
-        # if e == max(n_epochs - starting_epoch, 0):
-        #     utils.adjust_learning_rate(critic_opt, 0.1)
-        #     utils.adjust_learning_rate(gan_opt, 0.1)
-
-        loss_discr = 0.0
-        loss_gen = 0.0
-        loss_bce_gen = 0.0
-
         print("Epoch:", e)
 
-        tqdm_ = tqdm.tqdm(data_loader)
+        tqdm_ = tqdm.tqdm(data_loader, dynamic_ncols=True)
         step = 0
         for batch in tqdm_:
             model.train()
@@ -210,13 +198,17 @@ if __name__ == '__main__':
                     ssim_validation += [float(ssim_val)]
                     lpips_validation += [float(lpips_val)]
 
-            ssim_mean = np.array(ssim_validation).mean()
-            lpips_mean = np.array(lpips_validation).mean()
+            ssim_mean = sum(ssim_validation) / len(ssim_validation)
+            lpips_mean = sum(lpips_validation) / len(lpips_validation)
 
             print(f"Val SSIM: {ssim_mean}, Val LPIPS: {lpips_mean}")
+
+            export_dir = str(args.EXPORT_DIR)
+            if not os.path.exists(export_dir):
+                os.mkdir(export_dir)
             torch.save(model.state_dict(),
-                       args.EXPORT_DIR/'{0}_epoch{1}_ssim{2:.4f}_lpips{3:.4f}_crf{4}.pkl'.format(arch_name, e, ssim_mean, lpips_mean,
+                       export_dir + '/{0}_epoch{1}_ssim{2:.4f}_lpips{3:.4f}_crf{4}.pth'.format(arch_name, e, ssim_mean, lpips_mean,
                                                                                  args.CRF))
 
             # having critic's weights saved was not useful, better sparing storage!
-            # torch.save(critic.state_dict(), 'critic_gan_{}.pkl'.format(e + starting_epoch))
+            # torch.save(critic.state_dict(), 'critic_gan_{}.pth'.format(e + starting_epoch))
