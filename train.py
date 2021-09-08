@@ -59,8 +59,8 @@ if __name__ == '__main__':
     lpips_alex.to(device)
     critic.to(device)
 
-    dataset_train = dl.ARDataLoader2(path=str(args.DATASET_DIR), patch_size=96, eval=False, use_ar=True)
-    dataset_test = dl.ARDataLoader2(path=str(args.DATASET_DIR), patch_size=96, eval=True, use_ar=True)
+    dataset_train = dl.ARDataLoader2(path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=False, use_ar=True)
+    dataset_test = dl.ARDataLoader2(path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=True, use_ar=True)
 
     data_loader = DataLoader(dataset=dataset_train, batch_size=32, num_workers=12, shuffle=True,
                              pin_memory=True)
