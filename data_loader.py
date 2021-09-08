@@ -7,6 +7,7 @@ import random
 from io import BytesIO
 from torchvision.transforms import functional
 from os.path import join
+from itertools import chain
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -72,12 +73,12 @@ def _filter_bvidvc_path_by_res(path, target_res=1920):
     return False
 
 
-def _get_pics_in_subfolder(path, ext='.jpg'):
+def _get_pics_in_subfolder(path, exts=['.png', ".jpg"]):
     folders = []
     for path, subdirs, files in os.walk(path):
         files_list = []
         for name in files:
-            if name.endswith(ext):
+            if name.endswith(exts[0]) or name.endswith(exts[1]):
                 files_list += [os.path.join(path, name)]
         if len(files) > 0:
             folders += [(path, files_list)]
@@ -125,13 +126,15 @@ class ARDataLoader2(data.Dataset):
         self.upscale_factor = dataset_upscale_factor
         self.rf = rescale_factor
 
-        hq_dir = path + "_HQ"
-        lq_dir = path + f"_QF{crf}"
+        hq_dir = os.path.join(path, "frames_JPG_HQ")
+        lq_dir = os.path.join(path, f"frames_JPG_QF{crf}")
 
-        self.hq_dir = sorted(sum([files_list for _, files_list in _get_pics_in_subfolder(hq_dir)], []))
-        self.lq_dir = sorted(sum([files_list for _, files_list in _get_pics_in_subfolder(lq_dir)], []))
+        if not os.path.isdir(hq_dir) or not os.path.isdir(lq_dir):
+            raise ValueError(f"One of the directories is not valid:\nlq: {lq_dir}\nhq: {hq_dir}")
 
-        # count = sum([len(directory) for _, directory in self.hq_dir])
+        self.hq_dir = sorted(chain.from_iterable([files_list for _, files_list in _get_pics_in_subfolder(hq_dir)]))
+        self.lq_dir = sorted(chain.from_iterable([files_list for _, files_list in _get_pics_in_subfolder(lq_dir)]))
+
         count = len(self.hq_dir)
 
         self.train_len = int(count * train_pct)
