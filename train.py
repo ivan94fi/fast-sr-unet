@@ -19,8 +19,10 @@ from torch.utils.data import DataLoader
 import pytorch_ssim  # courtesy of https://github.com/Po-Hsun-Su/pytorch-ssim
 import tqdm
 import lpips  # courtesy of https://github.com/richzhang/PerceptualSimilarity
-from models import Discriminator, \
-    SRResNet  # courtesy of https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution
+from models import (
+    Discriminator,
+    SRResNet,
+)  # courtesy of https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution
 from pytorch_unet import SRUnet, UNet, SimpleResNet
 
 import warnings
@@ -32,7 +34,7 @@ warnings.filterwarnings(
 )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = utils.ARArgs()
 
     experiment = Experiment(
@@ -47,14 +49,25 @@ if __name__ == '__main__':
     dataset_upscale_factor = args.UPSCALE_FACTOR
     n_epochs = args.N_EPOCHS
 
-    if arch_name == 'srunet':
-        model = SRUnet(3, residual=True, scale_factor=dataset_upscale_factor, n_filters=args.N_FILTERS,
-                       downsample=args.DOWNSAMPLE, layer_multiplier=args.LAYER_MULTIPLIER)
-    elif arch_name == 'unet':
-        model = UNet(3, residual=True, scale_factor=dataset_upscale_factor, n_filters=args.N_FILTERS)
-    elif arch_name == 'srgan':
+    if arch_name == "srunet":
+        model = SRUnet(
+            3,
+            residual=True,
+            scale_factor=dataset_upscale_factor,
+            n_filters=args.N_FILTERS,
+            downsample=args.DOWNSAMPLE,
+            layer_multiplier=args.LAYER_MULTIPLIER,
+        )
+    elif arch_name == "unet":
+        model = UNet(
+            3,
+            residual=True,
+            scale_factor=dataset_upscale_factor,
+            n_filters=args.N_FILTERS,
+        )
+    elif arch_name == "srgan":
         model = SRResNet()
-    elif arch_name == 'espcn':
+    elif arch_name == "espcn":
         model = SimpleResNet(n_filters=64, n_blocks=6)
     else:
         raise Exception("Unknown architecture. Select one between:", args.archs)
@@ -70,8 +83,8 @@ if __name__ == '__main__':
     critic_opt = torch.optim.Adam(lr=1e-4, params=critic.parameters())
     gan_opt = torch.optim.Adam(lr=1e-4, params=model.parameters())
 
-    lpips_loss = lpips.LPIPS(net='vgg', version='0.1')
-    lpips_alex = lpips.LPIPS(net='alex', version='0.1')
+    lpips_loss = lpips.LPIPS(net="vgg", version="0.1")
+    lpips_alex = lpips.LPIPS(net="alex", version="0.1")
     ssim = pytorch_ssim.SSIM()
 
     model.to(device)
@@ -86,13 +99,27 @@ if __name__ == '__main__':
     }
     experiment.set_model_graph(pformat(model_graph))
 
-    dataset_train = dl.ARDataLoader2(path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=False, use_ar=True)
-    dataset_test = dl.ARDataLoader2(path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=True, use_ar=True)
+    dataset_train = dl.ARDataLoader2(
+        path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=False, use_ar=True
+    )
+    dataset_test = dl.ARDataLoader2(
+        path=str(args.DATASET_DIR), crf=args.CRF, patch_size=96, eval=True, use_ar=True
+    )
 
-    data_loader = DataLoader(dataset=dataset_train, batch_size=32, num_workers=12, shuffle=True,
-                             pin_memory=True)
-    data_loader_eval = DataLoader(dataset=dataset_test, batch_size=32, num_workers=12, shuffle=True,
-                                  pin_memory=True)
+    data_loader = DataLoader(
+        dataset=dataset_train,
+        batch_size=32,
+        num_workers=12,
+        shuffle=True,
+        pin_memory=True,
+    )
+    data_loader_eval = DataLoader(
+        dataset=dataset_test,
+        batch_size=32,
+        num_workers=12,
+        shuffle=True,
+        pin_memory=True,
+    )
 
     loss_discriminator = nn.BCEWithLogitsLoss()
 
@@ -156,13 +183,12 @@ if __name__ == '__main__':
 
             if step % 500 == 0:
                 h, w = y_true.shape[2], y_true.shape[3]
-                resized_x = F.interpolate(x.detach().clone(), size=(h,w))
+                resized_x = F.interpolate(x.detach().clone(), size=(h, w))
                 experiment.log_image(
                     make_grid(resized_x, y_true, y_fake), name="lq-hq-rec"
                 )
                 experiment.log_figure("g_grads", plot_grads(model))
                 experiment.log_figure("d_grads", plot_grads(critic))
-
 
             experiment.log_metric("g_loss_sum", loss_gen.item())
             experiment.log_metric("g_loss_adv", l0 * bce.item())
@@ -206,9 +232,13 @@ if __name__ == '__main__':
             export_dir = str(args.EXPORT_DIR)
             if not os.path.exists(export_dir):
                 os.mkdir(export_dir)
-            torch.save(model.state_dict(),
-                       export_dir + '/{0}_epoch{1}_ssim{2:.4f}_lpips{3:.4f}_crf{4}.pth'.format(arch_name, e, ssim_mean, lpips_mean,
-                                                                                 args.CRF))
+            torch.save(
+                model.state_dict(),
+                export_dir
+                + "/{0}_epoch{1}_ssim{2:.4f}_lpips{3:.4f}_crf{4}.pth".format(
+                    arch_name, e, ssim_mean, lpips_mean, args.CRF
+                ),
+            )
 
             # having critic's weights saved was not useful, better sparing storage!
             # torch.save(critic.state_dict(), 'critic_gan_{}.pth'.format(e + starting_epoch))

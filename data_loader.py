@@ -11,15 +11,15 @@ from itertools import chain
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-train_dir = 'Flickr2K'
-test_dir = 'Flickr2K'
+train_dir = "Flickr2K"
+test_dir = "Flickr2K"
 
 
-def get_imlist(path, ext='.jpg'):
+def get_imlist(path, ext=".jpg"):
     return [os.path.join(path, f) for f in os.listdir(path) if f.endswith(ext)]
 
 
-def get_imnames(path, ext='.jpg'):
+def get_imnames(path, ext=".jpg"):
     return [f.split(".")[0] for f in os.listdir(path) if f.endswith(ext)]
 
 
@@ -48,21 +48,18 @@ def downsample(img):
     return img
 
 
-transform = torchvision.transforms.Compose([
-    torchvision.transforms.ToTensor(),
-    normalize_img,
-])
+transform = torchvision.transforms.Compose(
+    [torchvision.transforms.ToTensor(), normalize_img]
+)
 
-transform_from_np = torchvision.transforms.Compose([
-    lambda x: x.permute(2, 1, 0),
-    normalize_img,
-])
+transform_from_np = torchvision.transforms.Compose(
+    [lambda x: x.permute(2, 1, 0), normalize_img]
+)
 
 de_normalize = denormalize_img
-de_transform = torchvision.transforms.Compose([
-    de_normalize,
-    torchvision.transforms.ToPILImage()
-])
+de_transform = torchvision.transforms.Compose(
+    [de_normalize, torchvision.transforms.ToPILImage()]
+)
 
 
 def _filter_bvidvc_path_by_res(path, target_res=1920):
@@ -73,7 +70,7 @@ def _filter_bvidvc_path_by_res(path, target_res=1920):
     return False
 
 
-def _get_pics_in_subfolder(path, exts=['.png', ".jpg"]):
+def _get_pics_in_subfolder(path, exts=[".png", ".jpg"]):
     folders = []
     for path, subdirs, files in os.walk(path):
         files_list = []
@@ -86,8 +83,17 @@ def _get_pics_in_subfolder(path, exts=['.png', ".jpg"]):
 
 
 class ARDataLoader2(data.Dataset):
-    def __init__(self, path, patch_size, crf, eval=False, train_pct=0.8, use_ar=True, dataset_upscale_factor=2,
-                 rescale_factor=None):
+    def __init__(
+        self,
+        path,
+        patch_size,
+        crf,
+        eval=False,
+        train_pct=0.8,
+        use_ar=True,
+        dataset_upscale_factor=2,
+        rescale_factor=None,
+    ):
         """
         Custom dataloader for the training phase. The getitem method will return a couple (x, y), where x is the
         LowQuality input and y is the relative groundtruth. The relationship between the LQ and HQ samples depends on
@@ -130,10 +136,21 @@ class ARDataLoader2(data.Dataset):
         lq_dir = os.path.join(path, f"frames_JPG_QF{crf}")
 
         if not os.path.isdir(hq_dir) or not os.path.isdir(lq_dir):
-            raise ValueError(f"One of the directories is not valid:\nlq: {lq_dir}\nhq: {hq_dir}")
+            raise ValueError(
+                f"One of the directories is not valid:\nlq: {lq_dir}\nhq: {hq_dir}"
+            )
 
-        self.hq_dir = sorted(chain.from_iterable([files_list for _, files_list in _get_pics_in_subfolder(hq_dir)]))
-        self.lq_dir = sorted(chain.from_iterable([files_list for _, files_list in _get_pics_in_subfolder(lq_dir)]))
+        self.hq_dir = sorted(
+            chain.from_iterable(
+                [files_list for _, files_list in _get_pics_in_subfolder(hq_dir)]
+            )
+        )
+        self.lq_dir = sorted(
+            chain.from_iterable(
+                [files_list for _, files_list in _get_pics_in_subfolder(lq_dir)]
+            )
+        )
+
 
         count = len(self.hq_dir)
 
@@ -148,7 +165,7 @@ class ARDataLoader2(data.Dataset):
 
         im_idx = item % self.train_len
         if self.eval:
-            im_idx += (self.train_len - 1)
+            im_idx += self.train_len - 1
 
         hq = load_img(self.hq_dir[im_idx])
         lq = load_img(self.lq_dir[im_idx])
@@ -170,7 +187,12 @@ class ARDataLoader2(data.Dataset):
 
         # left, upper, right, and lower
         crop_pos = (w_pos, h_pos, w_pos + self.patch_size, h_pos + self.patch_size)
-        crop_pos_sr = (sf * w_pos, sf * h_pos, sf * (w_pos + self.patch_size), sf * (h_pos + self.patch_size))
+        crop_pos_sr = (
+            sf * w_pos,
+            sf * h_pos,
+            sf * (w_pos + self.patch_size),
+            sf * (h_pos + self.patch_size),
+        )
         hq = hq.crop(crop_pos_sr)
         if not self.ar:
             lq = hq.resize((self.patch_size, self.patch_size))
@@ -220,7 +242,7 @@ def _stack(tensor_list):
 
 
 def is_image(path):
-    return path.endswith('.jpg') or path.endswith('.jpeg') or path.endswith('.png')
+    return path.endswith(".jpg") or path.endswith(".jpeg") or path.endswith(".png")
 
 
 def _imname(path):
@@ -233,7 +255,7 @@ def _strip_ext(path):
 
 
 def sort_by_frame_id(key):
-    value = key.split(".")[-2].split("_")[-1].replace('frame', '')
+    value = key.split(".")[-2].split("_")[-1].replace("frame", "")
     return int(value)
 
 
@@ -253,8 +275,9 @@ class TestDataLoader(data.Dataset):
         from_frame = int(from_frame)
         to_frame = int(to_frame)
 
-        assert from_frame < to_frame, 'Wrong attempt to cut the video. From frame {} is >= {}.'.format(from_frame,
-                                                                                                       to_frame)
+        assert (
+            from_frame < to_frame
+        ), f"Wrong attempt to cut the video. From frame {from_frame} is >= {to_frame}."
         to_frame = min(to_frame, len(self.im_list))
         self.im_list = self.im_list[from_frame:to_frame]
 
@@ -268,7 +291,10 @@ class TestDataLoader(data.Dataset):
         pic_name_lq = pic_name + [res_suffix, frame_suffix]
         pic_name_lq = "_".join(pic_name_lq)
 
-        pic_name_hq = pic_name + [str(int(res_suffix) * (2 if self.sr else 1)), frame_suffix]
+        pic_name_hq = pic_name + [
+            str(int(res_suffix) * (2 if self.sr else 1)),
+            frame_suffix,
+        ]
         pic_name_hq = "_".join(pic_name_hq)
 
         lr = Image.open(join(self.dir + "_LQ", pic_name_lq + ".jpg"))
@@ -299,15 +325,18 @@ class SingleFolderLoader(data.Dataset):
         self.dir = dir
         self.im_list = os.listdir(dir)
         self.im_list = sorted(self.im_list, key=sort_by_frame_id)
-        normalize = torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                                     std=[0.5, 0.5, 0.5])
-        self.preprocess = torchvision.transforms.Compose([
-            # torchvision.transforms.RandomCrop((64, 64)),
-            torchvision.transforms.Resize((256, 256)),
-            # transforms.RandomHorizontalFlip(),
-            torchvision.transforms.ToTensor(),
-            normalize,
-        ])
+        normalize = torchvision.transforms.Normalize(
+            mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]
+        )
+        self.preprocess = torchvision.transforms.Compose(
+            [
+                # torchvision.transforms.RandomCrop((64, 64)),
+                torchvision.transforms.Resize((256, 256)),
+                # transforms.RandomHorizontalFlip(),
+                torchvision.transforms.ToTensor(),
+                normalize,
+            ]
+        )
 
     def __len__(self):
         return len(self.im_list)
